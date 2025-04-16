@@ -191,8 +191,8 @@ class AuthService extends ChangeNotifier {
           final errorData = jsonDecode(response.body);
           final errorMessage = errorData['error'] ?? errorData['message'] ?? '회원가입에 실패했습니다.';
           
-          if (errorMessage.contains('Email already exists')) {
-            throw Exception('이미 가입된 이메일입니다. 다른 이메일을 사용해주세요.');
+          if (errorMessage.contains('Email already registered')) {
+            throw Exception('이미 등록된 이메일입니다.');
           } else if (errorMessage.contains('Invalid email format')) {
             throw Exception('올바른 이메일 형식이 아닙니다.');
           } else if (errorMessage.contains('Invalid password format')) {
@@ -291,38 +291,51 @@ class AuthService extends ChangeNotifier {
     }
   }
 
-  Future<void> updateDisabilityInfo({
+  Future<Map<String, dynamic>?> updateDisabilityInfo({
     required String disabilityType,
     String? otherDisabilityName,
     String? gmfcsLevel,
     String? developmentalType,
   }) async {
     try {
-      final prefs = await SharedPreferences.getInstance();
-      final token = prefs.getString('token');
+      print('=== Update Disability Info Debug ===');
+      print('API URL: $baseUrl');
       
-      if (token == null) {
-        throw Exception('로그인이 필요합니다');
-      }
+      final Map<String, dynamic> disabilityData = {
+        'disability_type': disabilityType,
+        if (otherDisabilityName != null) 'other_disability_name': otherDisabilityName,
+        if (gmfcsLevel != null) 'gmfcs_level': gmfcsLevel,
+        if (developmentalType != null) 'developmental_type': developmentalType,
+      };
+      
+      print('Request Data: $disabilityData');
 
-      final response = await _dio.put(
-        '/api/user/disability-info',
-        data: {
-          'disabilityType': disabilityType,
-          if (otherDisabilityName != null) 'otherDisabilityName': otherDisabilityName,
-          if (gmfcsLevel != null) 'gmfcsLevel': gmfcsLevel,
-          if (developmentalType != null) 'developmentalType': developmentalType,
+      final response = await http.patch(
+        Uri.parse('$baseUrl/auth/update-disability'),
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer $_token',
         },
-        options: Options(
-          headers: {'Authorization': 'Bearer $token'},
-        ),
+        body: jsonEncode(disabilityData),
       );
 
-      if (response.statusCode != 200) {
-        throw Exception('장애 정보 업데이트에 실패했습니다');
+      print('Response status code: ${response.statusCode}');
+      print('Response body: ${response.body}');
+
+      if (response.statusCode == 200) {
+        final responseData = jsonDecode(response.body);
+        if (responseData['user'] != null) {
+          _user = User.fromJson(responseData['user']);
+          notifyListeners();
+        }
+        return responseData;
+      } else {
+        final errorData = jsonDecode(response.body);
+        throw Exception(errorData['error'] ?? '장애 정보 업데이트에 실패했습니다.');
       }
     } catch (e) {
-      throw Exception('장애 정보 업데이트 중 오류가 발생했습니다: ${e.toString()}');
+      print('Update disability info error: $e');
+      throw Exception('장애 정보 업데이트 중 오류가 발생했습니다: $e');
     }
   }
 } 

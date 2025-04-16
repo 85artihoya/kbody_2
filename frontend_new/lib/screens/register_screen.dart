@@ -97,7 +97,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
         'detail_address': _detailAddressController.text.isEmpty ? null : _detailAddressController.text,
         'user_type': 'disabled',
         'disability_type': null,
-        'disability_detail': ''
+        'disability_detail': null
       };
 
       print('Registration request data: $registerData');  // 디버깅을 위한 로그 추가

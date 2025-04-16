@@ -64,6 +64,32 @@ class AuthProvider extends ChangeNotifier {
     }
   }
 
+  Future<void> updateDisabilityInfo({
+    required String disabilityType,
+    String? gmfcsLevel,
+    String? developmentalType,
+    String? otherDisabilityName,
+  }) async {
+    _isLoading = true;
+    notifyListeners();
+
+    try {
+      final response = await _authService.updateDisabilityInfo(
+        disabilityType: disabilityType,
+        gmfcsLevel: gmfcsLevel,
+        developmentalType: developmentalType,
+        otherDisabilityName: otherDisabilityName,
+      );
+      
+      if (response != null && response['user'] != null) {
+        _user = User.fromJson(response['user'] as Map<String, dynamic>);
+      }
+    } finally {
+      _isLoading = false;
+      notifyListeners();
+    }
+  }
+
   Future<void> logout() async {
     await _authService.logout();
     _token = null;

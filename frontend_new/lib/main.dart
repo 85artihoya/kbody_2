@@ -3,10 +3,7 @@ import 'package:provider/provider.dart';
 import 'package:go_router/go_router.dart';
 import 'package:frontend_new/services/auth_service.dart';
 import 'package:frontend_new/providers/auth_provider.dart';
-import 'package:frontend_new/screens/login_screen.dart';
-import 'package:frontend_new/screens/register_screen.dart';
-import 'package:frontend_new/screens/disability_selection_screen.dart';
-import 'package:frontend_new/screens/home_screen.dart';
+import 'package:frontend_new/routes/routes.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 
 void main() async {
@@ -22,29 +19,6 @@ class MyApp extends StatelessWidget {
   Widget build(BuildContext context) {
     final authService = AuthService();
     
-    // GoRouter 설정
-    final router = GoRouter(
-      initialLocation: '/login',
-      routes: [
-        GoRoute(
-          path: '/login',
-          builder: (context, state) => const LoginScreen(),
-        ),
-        GoRoute(
-          path: '/register',
-          builder: (context, state) => const RegisterScreen(),
-        ),
-        GoRoute(
-          path: '/disability-selection',
-          builder: (context, state) => const DisabilitySelectionScreen(),
-        ),
-        GoRoute(
-          path: '/home',
-          builder: (context, state) => const HomeScreen(),
-        ),
-      ],
-    );
-
     return MultiProvider(
       providers: [
         ChangeNotifierProvider<AuthService>.value(
@@ -61,7 +35,7 @@ class MyApp extends StatelessWidget {
           primarySwatch: Colors.blue,
           visualDensity: VisualDensity.adaptivePlatformDensity,
         ),
-        routerConfig: router,
+        routerConfig: Routes.router,
       ),
     );
   }

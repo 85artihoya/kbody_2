@@ -1,108 +1,125 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
-import '../services/auth_service.dart';
+import '../providers/auth_provider.dart';
 
 class OtherDisabilityScreen extends StatefulWidget {
-  final Map<String, dynamic> signupData;
-
-  const OtherDisabilityScreen({
-    super.key,
-    required this.signupData,
-  });
+  const OtherDisabilityScreen({super.key});
 
   @override
   State<OtherDisabilityScreen> createState() => _OtherDisabilityScreenState();
 }
 
 class _OtherDisabilityScreenState extends State<OtherDisabilityScreen> {
-  final _diagnosisController = TextEditingController();
+  final _formKey = GlobalKey<FormState>();
+  final _disabilityController = TextEditingController();
   bool _isLoading = false;
 
   @override
   void dispose() {
-    _diagnosisController.dispose();
+    _disabilityController.dispose();
     super.dispose();
-  }
-
-  Future<void> _handleSubmit() async {
-    if (_diagnosisController.text.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('진단명을 입력해주세요')),
-      );
-      return;
-    }
-
-    setState(() {
-      _isLoading = true;
-    });
-
-    try {
-      final Map<String, dynamic> updatedSignupData = Map.from(widget.signupData);
-      updatedSignupData['disability'] = {
-        'type': 'other',
-        'otherDisabilityName': _diagnosisController.text,
-        'gmfcsLevel': null,
-        'developmentalType': null,
-      };
-      
-      if (mounted) {
-        context.push('/auth/register-complete', extra: updatedSignupData);
-      }
-    } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(e.toString())),
-        );
-      }
-    } finally {
-      if (mounted) {
-        setState(() {
-          _isLoading = false;
-        });
-      }
-    }
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('기타 장애 진단명 입력'),
+        title: const Text('기타 장애 입력'),
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back),
+          onPressed: () => context.pop(),
+        ),
       ),
-      body: Padding(
-        padding: const EdgeInsets.all(16.0),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const Text(
-              '진단명을 입력해주세요',
-              style: TextStyle(
-                fontSize: 18,
-                fontWeight: FontWeight.bold,
-              ),
+      body: SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.all(16.0),
+          child: Form(
+            key: _formKey,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                const Text(
+                  '장애 진단명을 입력해주세요',
+                  style: TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
+                  ),
+                  textAlign: TextAlign.center,
+                ),
+                const SizedBox(height: 32),
+                TextFormField(
+                  controller: _disabilityController,
+                  decoration: const InputDecoration(
+                    labelText: '장애 진단명',
+                    hintText: '장애 진단명을 입력하세요',
+                    border: OutlineInputBorder(),
+                  ),
+                  validator: (value) {
+                    if (value == null || value.isEmpty) {
+                      return '장애 진단명을 입력해주세요';
+                    }
+                    return null;
+                  },
+                ),
+                const Spacer(),
+                ElevatedButton(
+                  onPressed: _isLoading
+                    ? null
+                    : () async {
+                        if (!_formKey.currentState!.validate()) return;
+                        
+                        setState(() {
+                          _isLoading = true;
+                        });
+                        try {
+                          await context.read<AuthProvider>().updateDisabilityInfo(
+                            disabilityType: '기타',
+                            otherDisabilityName: _disabilityController.text,
+                          );
+                          if (mounted) {
+                            context.go('/register-complete');
+                          }
+                        } catch (e) {
+                          if (mounted) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(content: Text(e.toString())),
+                            );
+                          }
+                        } finally {
+                          if (mounted) {
+                            setState(() {
+                              _isLoading = false;
+                            });
+                          }
+                        }
+                      },
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: const Color(0xFF4A55E7),
+                    foregroundColor: Colors.white,
+                    padding: const EdgeInsets.symmetric(vertical: 16),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    disabledBackgroundColor: Colors.grey[300],
+                  ),
+                  child: _isLoading
+                    ? const SizedBox(
+                        width: 24,
+                        height: 24,
+                        child: CircularProgressIndicator(
+                          color: Colors.white,
+                          strokeWidth: 2,
+                        ),
+                      )
+                    : const Text(
+                        '저장',
+                        style: TextStyle(fontSize: 16),
+                      ),
+                ),
+              ],
             ),
-            const SizedBox(height: 16),
-            TextFormField(
-              controller: _diagnosisController,
-              decoration: const InputDecoration(
-                labelText: '진단명',
-                border: OutlineInputBorder(),
-                hintText: '예) 뇌졸중, 척수손상 등',
-              ),
-              maxLines: 3,
-            ),
-            const SizedBox(height: 32),
-            SizedBox(
-              width: double.infinity,
-              child: ElevatedButton(
-                onPressed: _isLoading ? null : _handleSubmit,
-                child: _isLoading
-                    ? const CircularProgressIndicator()
-                    : const Text('완료'),
-              ),
-            ),
-          ],
+          ),
         ),
       ),
     );

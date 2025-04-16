@@ -1,215 +1,120 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
-import '../services/auth_service.dart';
-import 'brain_disability_selection_screen.dart';
-import 'developmental_disability_selection_screen.dart';
-import 'other_disability_screen.dart';
-
-enum DisabilityType {
-  brain('뇌병변'),
-  developmental('발달장애'),
-  other('기타');
-
-  final String label;
-  const DisabilityType(this.label);
-}
+import '../providers/auth_provider.dart';
 
 class DisabilitySelectionScreen extends StatefulWidget {
-  final Map<String, dynamic>? signupData;
-  
-  const DisabilitySelectionScreen({
-    Key? key,
-    this.signupData,
-  }) : super(key: key);
+  const DisabilitySelectionScreen({super.key});
 
   @override
   State<DisabilitySelectionScreen> createState() => _DisabilitySelectionScreenState();
 }
 
 class _DisabilitySelectionScreenState extends State<DisabilitySelectionScreen> {
-  String? _selectedDisabilityType;
-  String? _selectedGmfcsLevel;
-  String? _selectedDevelopmentalType;
-  bool _isLoading = false;
-
-  final List<String> _disabilityTypes = [
-    '뇌성마비',
-    '척수장애',
-    '근육병',
-    '발달장애',
-    '기타',
-  ];
-
-  final List<String> _gmfcsLevels = [
-    'GMFCS I',
-    'GMFCS II',
-    'GMFCS III',
-    'GMFCS IV',
-    'GMFCS V',
-  ];
-
-  final List<String> _developmentalTypes = [
-    '자폐성 장애',
-    '지적 장애',
-    '주의력결핍 과잉행동장애',
-    '학습장애',
-    '기타',
-  ];
+  String? _selectedType;
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('장애 정보 입력'),
+        title: const Text('세부 정보 입력'),
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back),
+          onPressed: () => context.pop(),
+        ),
       ),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.all(16.0),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const Text(
-              '장애 유형을 선택해주세요',
-              style: TextStyle(
-                fontSize: 18,
-                fontWeight: FontWeight.bold,
-              ),
-            ),
-            const SizedBox(height: 16),
-            Wrap(
-              spacing: 8,
-              runSpacing: 8,
-              children: _disabilityTypes.map((type) {
-                final isSelected = _selectedDisabilityType == type;
-                return ChoiceChip(
-                  label: Text(type),
-                  selected: isSelected,
-                  onSelected: (selected) {
-                    setState(() {
-                      _selectedDisabilityType = selected ? type : null;
-                      _selectedGmfcsLevel = null;
-                      _selectedDevelopmentalType = null;
-                    });
-                  },
-                );
-              }).toList(),
-            ),
-            if (_selectedDisabilityType == '뇌성마비') ...[
-              const SizedBox(height: 24),
+      body: SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.all(16.0),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
               const Text(
-                'GMFCS 레벨을 선택해주세요',
+                '정확한 측정을 위해 해당 정보를 체크해주세요',
                 style: TextStyle(
-                  fontSize: 18,
+                  fontSize: 16,
                   fontWeight: FontWeight.bold,
+                ),
+                textAlign: TextAlign.center,
+              ),
+              const SizedBox(height: 32),
+              ElevatedButton(
+                onPressed: () {
+                  setState(() {
+                    _selectedType = 'disabled';
+                  });
+                },
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: _selectedType == 'disabled' 
+                    ? const Color(0xFF4A55E7) 
+                    : Colors.grey[300],
+                  foregroundColor: _selectedType == 'disabled' 
+                    ? Colors.white 
+                    : Colors.black,
+                  padding: const EdgeInsets.symmetric(vertical: 16),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                ),
+                child: const Text(
+                  '장애',
+                  style: TextStyle(fontSize: 16),
                 ),
               ),
               const SizedBox(height: 16),
-              Wrap(
-                spacing: 8,
-                runSpacing: 8,
-                children: _gmfcsLevels.map((level) {
-                  final isSelected = _selectedGmfcsLevel == level;
-                  return ChoiceChip(
-                    label: Text(level),
-                    selected: isSelected,
-                    onSelected: (selected) {
-                      setState(() {
-                        _selectedGmfcsLevel = selected ? level : null;
-                      });
-                    },
-                  );
-                }).toList(),
-              ),
-            ],
-            if (_selectedDisabilityType == '발달장애') ...[
-              const SizedBox(height: 24),
-              const Text(
-                '발달 장애 유형을 선택해주세요',
-                style: TextStyle(
-                  fontSize: 18,
-                  fontWeight: FontWeight.bold,
+              ElevatedButton(
+                onPressed: () {
+                  setState(() {
+                    _selectedType = 'non-disabled';
+                  });
+                },
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: _selectedType == 'non-disabled' 
+                    ? const Color(0xFF4A55E7) 
+                    : Colors.grey[300],
+                  foregroundColor: _selectedType == 'non-disabled' 
+                    ? Colors.white 
+                    : Colors.black,
+                  padding: const EdgeInsets.symmetric(vertical: 16),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                ),
+                child: const Text(
+                  '비장애',
+                  style: TextStyle(fontSize: 16),
                 ),
               ),
-              const SizedBox(height: 16),
-              Wrap(
-                spacing: 8,
-                runSpacing: 8,
-                children: _developmentalTypes.map((type) {
-                  final isSelected = _selectedDevelopmentalType == type;
-                  return ChoiceChip(
-                    label: Text(type),
-                    selected: isSelected,
-                    onSelected: (selected) {
-                      setState(() {
-                        _selectedDevelopmentalType = selected ? type : null;
-                      });
+              const Spacer(),
+              ElevatedButton(
+                onPressed: _selectedType == null 
+                  ? null 
+                  : () {
+                      if (_selectedType == 'disabled') {
+                        context.go('/disability-type');
+                      } else {
+                        // 비장애인 선택 시 바로 회원가입 완료 페이지로 이동
+                        context.go('/register-complete');
+                      }
                     },
-                  );
-                }).toList(),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: const Color(0xFF4A55E7),
+                  foregroundColor: Colors.white,
+                  padding: const EdgeInsets.symmetric(vertical: 16),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  disabledBackgroundColor: Colors.grey[300],
+                ),
+                child: const Text(
+                  '다음',
+                  style: TextStyle(fontSize: 16),
+                ),
               ),
             ],
-            const SizedBox(height: 32),
-            SizedBox(
-              width: double.infinity,
-              child: ElevatedButton(
-                onPressed: _isLoading || !_isValidSelection
-                    ? null
-                    : _handleSubmit,
-                child: _isLoading
-                    ? const CircularProgressIndicator()
-                    : const Text('다음'),
-              ),
-            ),
-          ],
+          ),
         ),
       ),
     );
-  }
-
-  bool get _isValidSelection {
-    if (_selectedDisabilityType == null) return false;
-    if (_selectedDisabilityType == '뇌성마비' && _selectedGmfcsLevel == null) return false;
-    if (_selectedDisabilityType == '발달장애' && _selectedDevelopmentalType == null) return false;
-    return true;
-  }
-
-  Future<void> _handleSubmit() async {
-    if (!_isValidSelection) return;
-
-    setState(() {
-      _isLoading = true;
-    });
-
-    try {
-      if (_selectedDisabilityType == '기타') {
-        if (mounted) {
-          context.push('/other-disability');
-        }
-        return;
-      }
-
-      final authService = Provider.of<AuthService>(context, listen: false);
-      await authService.updateDisabilityInfo(
-        disabilityType: _selectedDisabilityType!,
-        gmfcsLevel: _selectedGmfcsLevel,
-        developmentalType: _selectedDevelopmentalType,
-      );
-
-      if (mounted) {
-        context.go('/home');
-      }
-    } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(e.toString())),
-        );
-      }
-    } finally {
-      if (mounted) {
-        setState(() {
-          _isLoading = false;
-        });
-      }
-    }
   }
 } 
