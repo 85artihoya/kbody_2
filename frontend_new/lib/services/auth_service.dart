@@ -132,12 +132,12 @@ class AuthService extends ChangeNotifier {
         'password': userData['password'],
         'name': userData['name'],
         'gender': userData['gender'],
-        'birth_date': userData['birthDate'].toString().split('T')[0],
+        'birth_date': userData['birth_date'],
         'address': userData['address'],
-        'detail_address': userData['detailAddress'],
+        'detail_address': userData['detail_address'],
         'user_type': 'disabled',
-        'disability_type': userData['disabilityType'],
-        'disability_detail': userData['disabilityDetail'] ?? '',
+        'disability_type': userData['disability_type'] ?? '',
+        'disability_detail': userData['disability_detail'] ?? '',
       };
       
       print('Request Data: ${jsonEncode(requestData)}');

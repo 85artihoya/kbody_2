@@ -85,18 +85,24 @@ class _RegisterScreenState extends State<RegisterScreen> {
     }
 
     try {
-      await context.read<AuthProvider>().register({
+      final Map<String, dynamic> registerData = {
         'email': _emailController.text,
         'password': _passwordController.text,
         'name': _nameController.text,
         'gender': _gender!,
-        'birth_date': _birthDate,
+        'birth_date': _birthDate != null 
+            ? "${_birthDate!.year}-${_birthDate!.month.toString().padLeft(2, '0')}-${_birthDate!.day.toString().padLeft(2, '0')}"
+            : null,
         'address': _address!,
-        'detail_address': _detailAddressController.text,
+        'detail_address': _detailAddressController.text.isEmpty ? null : _detailAddressController.text,
         'user_type': 'disabled',
-        'disability_type': '',
+        'disability_type': null,
         'disability_detail': ''
-      });
+      };
+
+      print('Registration request data: $registerData');  // 디버깅을 위한 로그 추가
+
+      await context.read<AuthProvider>().register(registerData);
 
       if (mounted) {
         context.go('/disability-selection');

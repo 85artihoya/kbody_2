@@ -35,6 +35,10 @@ class AuthProvider extends ChangeNotifier {
 
     try {
       print('AuthProvider: Starting registration');
+      print('=== Registration Debug Info ===');
+      print('API URL: ${AuthService.baseUrl}');
+      print('=== Error Details ===');
+      
       if (userData['birth_date'] is DateTime) {
         final birthDate = userData['birth_date'] as DateTime;
         userData['birth_date'] = "${birthDate.year}-${birthDate.month.toString().padLeft(2, '0')}-${birthDate.day.toString().padLeft(2, '0')}";
