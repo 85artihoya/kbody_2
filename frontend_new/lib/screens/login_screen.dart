@@ -15,12 +15,29 @@ class _LoginScreenState extends State<LoginScreen> {
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
   bool _isLoading = false;
+  bool _isButtonEnabled = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _emailController.addListener(_updateButtonState);
+    _passwordController.addListener(_updateButtonState);
+  }
 
   @override
   void dispose() {
+    _emailController.removeListener(_updateButtonState);
+    _passwordController.removeListener(_updateButtonState);
     _emailController.dispose();
     _passwordController.dispose();
     super.dispose();
+  }
+
+  void _updateButtonState() {
+    setState(() {
+      _isButtonEnabled = _emailController.text.isNotEmpty && 
+                        _passwordController.text.isNotEmpty;
+    });
   }
 
   void _handleLogin() async {
@@ -129,15 +146,28 @@ class _LoginScreenState extends State<LoginScreen> {
                   ),
                   const SizedBox(height: 24),
                   ElevatedButton(
-                    onPressed: authProvider.isLoading ? null : _handleLogin,
+                    onPressed: (_isButtonEnabled && !authProvider.isLoading) ? _handleLogin : null,
                     style: ElevatedButton.styleFrom(
+                      backgroundColor: (_isButtonEnabled && !authProvider.isLoading)
+                        ? const Color(0xFF4A55E7)  // 활성화 상태: 파란색
+                        : Colors.grey[300],        // 비활성화 상태: 회색
+                      foregroundColor: (_isButtonEnabled && !authProvider.isLoading)
+                        ? Colors.white            // 활성화 상태: 흰색 텍스트
+                        : Colors.grey[600],       // 비활성화 상태: 회색 텍스트
                       padding: const EdgeInsets.symmetric(vertical: 16),
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(8),
                       ),
                     ),
                     child: authProvider.isLoading
-                        ? const CircularProgressIndicator()
+                        ? const SizedBox(
+                            width: 24,
+                            height: 24,
+                            child: CircularProgressIndicator(
+                              color: Colors.white,
+                              strokeWidth: 2,
+                            ),
+                          )
                         : const Text(
                             '로그인',
                             style: TextStyle(fontSize: 16),

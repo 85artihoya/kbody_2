@@ -61,11 +61,23 @@ class Routes {
       ),
       GoRoute(
         path: developmentalType,
-        builder: (context, state) => const DevelopmentalTypeScreen(),
+        builder: (context, state) {
+          final registerData = state.extra as Map<String, dynamic>?;
+          if (registerData == null) {
+            return const LoginScreen();
+          }
+          return DevelopmentalTypeScreen(registerData: registerData);
+        },
       ),
       GoRoute(
         path: otherDisability,
-        builder: (context, state) => const OtherDisabilityScreen(),
+        builder: (context, state) {
+          final registerData = state.extra as Map<String, dynamic>?;
+          if (registerData == null) {
+            return const LoginScreen();
+          }
+          return OtherDisabilityScreen(registerData: registerData);
+        },
       ),
       GoRoute(
         path: registerComplete,

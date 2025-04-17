@@ -26,7 +26,7 @@ class _GmfcsSelectionScreenState extends State<GmfcsSelectionScreen> {
         title: const Text('GMFCS 레벨 선택'),
         leading: IconButton(
           icon: const Icon(Icons.arrow_back),
-          onPressed: () => context.pop(),
+          onPressed: () => context.go('/disability-selection', extra: widget.registerData),
         ),
       ),
       body: SafeArea(

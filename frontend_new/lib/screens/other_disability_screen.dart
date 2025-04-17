@@ -4,7 +4,12 @@ import 'package:provider/provider.dart';
 import '../providers/auth_provider.dart';
 
 class OtherDisabilityScreen extends StatefulWidget {
-  const OtherDisabilityScreen({super.key});
+  final Map<String, dynamic> registerData;
+  
+  const OtherDisabilityScreen({
+    super.key,
+    required this.registerData,
+  });
 
   @override
   State<OtherDisabilityScreen> createState() => _OtherDisabilityScreenState();
@@ -28,7 +33,7 @@ class _OtherDisabilityScreenState extends State<OtherDisabilityScreen> {
         title: const Text('기타 장애 입력'),
         leading: IconButton(
           icon: const Icon(Icons.arrow_back),
-          onPressed: () => context.pop(),
+          onPressed: () => context.go('/disability-selection', extra: widget.registerData),
         ),
       ),
       body: SafeArea(
@@ -73,10 +78,17 @@ class _OtherDisabilityScreenState extends State<OtherDisabilityScreen> {
                           _isLoading = true;
                         });
                         try {
-                          await context.read<AuthProvider>().updateDisabilityInfo(
-                            disabilityType: '기타',
-                            otherDisabilityName: _disabilityController.text,
-                          );
+                          // 회원 정보에 기타 장애 정보 추가
+                          final registerData = Map<String, dynamic>.from(widget.registerData);
+                          registerData['disability_type'] = '기타';
+                          registerData['other_disability_name'] = _disabilityController.text;
+                          registerData['user_type'] = 'disabled';
+                          
+                          print('Final registration data: $registerData');
+
+                          // 회원가입 수행
+                          await context.read<AuthProvider>().register(registerData);
+
                           if (mounted) {
                             context.go('/register-complete');
                           }

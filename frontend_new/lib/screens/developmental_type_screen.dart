@@ -4,7 +4,12 @@ import 'package:provider/provider.dart';
 import '../providers/auth_provider.dart';
 
 class DevelopmentalTypeScreen extends StatefulWidget {
-  const DevelopmentalTypeScreen({super.key});
+  final Map<String, dynamic> registerData;
+  
+  const DevelopmentalTypeScreen({
+    super.key,
+    required this.registerData,
+  });
 
   @override
   State<DevelopmentalTypeScreen> createState() => _DevelopmentalTypeScreenState();
@@ -21,7 +26,7 @@ class _DevelopmentalTypeScreenState extends State<DevelopmentalTypeScreen> {
         title: const Text('발달장애 유형 선택'),
         leading: IconButton(
           icon: const Icon(Icons.arrow_back),
-          onPressed: () => context.pop(),
+          onPressed: () => context.go('/disability-selection', extra: widget.registerData),
         ),
       ),
       body: SafeArea(
@@ -51,10 +56,16 @@ class _DevelopmentalTypeScreenState extends State<DevelopmentalTypeScreen> {
                         _isLoading = true;
                       });
                       try {
-                        await context.read<AuthProvider>().updateDisabilityInfo(
-                          disabilityType: '발달장애',
-                          developmentalType: _selectedType == 'intellectual' ? '지적 장애' : '자폐 장애',
-                        );
+                        // 회원 정보에 발달장애 유형 추가
+                        final registerData = Map<String, dynamic>.from(widget.registerData);
+                        registerData['developmental_type'] = _selectedType == 'intellectual' ? '지적 장애' : '자폐 장애';
+                        registerData['user_type'] = 'disabled';
+                        
+                        print('Final registration data: $registerData');
+
+                        // 회원가입 수행
+                        await context.read<AuthProvider>().register(registerData);
+
                         if (mounted) {
                           context.go('/register-complete');
                         }
