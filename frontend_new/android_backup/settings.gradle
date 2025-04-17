@@ -1,0 +1,22 @@
+pluginManagement {
+    repositories {
+        gradlePluginPortal()
+        google()
+        mavenCentral()
+    }
+}
+
+dependencyResolutionManagement {
+    repositoriesMode.set(RepositoriesMode.FAIL_ON_PROJECT_REPOS)
+    repositories {
+        google()
+        mavenCentral()
+    }
+}
+
+rootProject.name = 'android'
+include ':app'
+
+def flutterProjectRoot = settingsDir.parentFile
+def flutterGradleFile = new File(flutterProjectRoot, '.android/include_flutter.groovy')
+apply from: flutterGradleFile 

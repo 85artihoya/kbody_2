@@ -3,10 +3,16 @@ import 'package:camera/camera.dart';
 import 'package:sensors_plus/sensors_plus.dart';
 import 'dart:math';
 import 'dart:io';
+import 'dart:ui' as ui;
+import 'package:go_router/go_router.dart';
+import 'package:permission_handler/permission_handler.dart';
+import '../screens/pose_analysis_screen.dart';
+import 'package:google_mlkit_pose_detection/google_mlkit_pose_detection.dart';
+import 'package:path_provider/path_provider.dart';
 
 class CameraScreen extends StatefulWidget {
   final String viewType;
-  
+
   const CameraScreen({
     Key? key,
     required this.viewType,
@@ -17,11 +23,19 @@ class CameraScreen extends StatefulWidget {
 }
 
 class _CameraScreenState extends State<CameraScreen> {
-  CameraController? _controller;
-  bool _isInitialized = false;
+  late CameraController _controller;
+  late Future<void> _initializeControllerFuture;
+  final _poseDetector = PoseDetector(
+    options: PoseDetectorOptions(
+      mode: PoseDetectionMode.single,
+    ),
+  );
+  bool _isCameraInitialized = false;
+  bool _isCapturing = false;
+  bool _showGrid = true;
   bool _isBalanced = false;
-  double _roll = 0.0;
-  double _pitch = 0.0;
+  double _horizontalBalance = 0.0;
+  double _verticalBalance = 0.0;
   XFile? _capturedImage;
   List<CameraDescription> cameras = [];
   int _selectedCameraIndex = 0;
@@ -30,209 +44,200 @@ class _CameraScreenState extends State<CameraScreen> {
   void initState() {
     super.initState();
     _initializeCamera();
-    _initializeSensors();
   }
 
   Future<void> _initializeCamera() async {
-    cameras = await availableCameras();
-    if (cameras.isEmpty) return;
+    if (!await _checkPermissions()) return;
+
+    final cameras = await availableCameras();
+    if (cameras.isEmpty) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('카메라를 찾을 수 없습니다.')),
+        );
+      }
+      return;
+    }
 
     _controller = CameraController(
-      cameras[_selectedCameraIndex],
+      cameras[0],
       ResolutionPreset.high,
       enableAudio: false,
     );
 
-    try {
-      await _controller!.initialize();
-      setState(() {
-        _isInitialized = true;
-      });
-    } catch (e) {
-      print('카메라 초기화 오류: $e');
-    }
-  }
-
-  Future<void> _switchCamera() async {
-    if (cameras.length < 2) return;
-
-    setState(() {
-      _selectedCameraIndex = (_selectedCameraIndex + 1) % cameras.length;
-      _isInitialized = false;
-    });
-
-    await _controller?.dispose();
-
-    _controller = CameraController(
-      cameras[_selectedCameraIndex],
-      ResolutionPreset.high,
-      enableAudio: false,
-    );
+    _initializeControllerFuture = _controller.initialize();
 
     try {
-      await _controller!.initialize();
-      setState(() {
-        _isInitialized = true;
-      });
+      await _initializeControllerFuture;
+      if (mounted) {
+        setState(() {
+          _isCameraInitialized = true;
+        });
+      }
     } catch (e) {
-      print('카메라 전환 오류: $e');
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('카메라 초기화 실패: $e')),
+        );
+      }
     }
   }
 
-  void _initializeSensors() {
-    accelerometerEvents.listen((AccelerometerEvent event) {
-      setState(() {
-        _roll = atan2(-event.y, -event.z) * 180 / pi;
-        _pitch = atan2(-event.x, sqrt(event.y * event.y + event.z * event.z)) * 180 / pi;
-        _isBalanced = _roll.abs() < 3.0 && _pitch.abs() < 3.0;
-      });
-    });
-  }
-
-  Widget _buildGridLines() {
-    return CustomPaint(
-      size: Size.infinite,
-      painter: GridPainter(),
-    );
-  }
-
-  Widget _buildLevelIndicator() {
-    return Positioned(
-      top: 20,
-      left: 0,
-      right: 0,
-      child: Center(
-        child: Container(
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-          decoration: BoxDecoration(
-            color: _isBalanced ? Colors.green.withOpacity(0.7) : Colors.red.withOpacity(0.7),
-            borderRadius: BorderRadius.circular(20),
-          ),
-          child: Text(
-            _isBalanced ? '수평 상태' : '기기를 수평으로 맞추세요',
-            style: const TextStyle(color: Colors.white),
-          ),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildGuidelineText() {
-    String guideText = '';
-    switch (widget.viewType) {
-      case 'FRONT':
-        guideText = '• 정면을 바라보고 서주세요\n• 양팔을 45도 정도 벌려주세요\n• 전신이 모두 보이도록 해주세요';
-        break;
-      case 'SIDE':
-        guideText = '• 옆으로 서서 한쪽 방향을 봐주세요\n• 팔은 자연스럽게 내려주세요\n• 전신이 모두 보이도록 해주세요';
-        break;
-      case 'BACK':
-        guideText = '• 뒤를 보고 서주세요\n• 양팔을 45도 정도 벌려주세요\n• 전신이 모두 보이도록 해주세요';
-        break;
+  Future<bool> _checkPermissions() async {
+    final cameraStatus = await Permission.camera.status;
+    if (!cameraStatus.isGranted) {
+      final result = await Permission.camera.request();
+      if (!result.isGranted) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('카메라 권한이 필요합니다.')),
+          );
+        }
+        return false;
+      }
     }
+    return true;
+  }
 
-    return Positioned(
-      top: 80,
-      left: 20,
-      right: 20,
-      child: Container(
-        padding: const EdgeInsets.all(16),
-        decoration: BoxDecoration(
-          color: Colors.black.withOpacity(0.7),
-          borderRadius: BorderRadius.circular(12),
-        ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              '촬영 가이드',
-              style: const TextStyle(
-                color: Colors.white,
-                fontSize: 16,
-                fontWeight: FontWeight.bold,
-                fontFamily: 'NotoSansKR',
-              ),
+  Future<String?> _takePicture() async {
+    try {
+      await _initializeControllerFuture;
+
+      final image = await _controller.takePicture();
+      final imageFile = File(image.path);
+
+      // 포즈 감지
+      final inputImage = InputImage.fromFilePath(image.path);
+      final poses = await _poseDetector.processImage(inputImage);
+
+      if (poses.isEmpty) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('포즈를 감지할 수 없습니다. 다시 시도해주세요.'),
+              backgroundColor: Colors.red,
             ),
-            const SizedBox(height: 8),
-            Text(
-              guideText,
-              style: const TextStyle(
-                color: Colors.white,
-                fontSize: 14,
-                fontFamily: 'NotoSansKR',
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
+          );
+        }
+        return null;
+      }
 
-  Future<void> _takePicture() async {
-    if (!_controller!.value.isInitialized) return;
-
-    try {
-      final image = await _controller!.takePicture();
-      setState(() {
-        _capturedImage = image;
-      });
+      return image.path;
     } catch (e) {
-      print('사진 촬영 오류: $e');
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('사진 촬영 중 오류가 발생했습니다.'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+      return null;
     }
   }
 
-  void _retakePicture() {
+  void _updateBalance() {
+    // TODO: 실제 균형 상태 계산 로직 구현
     setState(() {
-      _capturedImage = null;
+      _horizontalBalance = 0.0; // -1.0 ~ 1.0
+      _verticalBalance = 0.0; // -1.0 ~ 1.0
+      _isBalanced = _horizontalBalance.abs() < 0.1 && _verticalBalance.abs() < 0.1;
     });
   }
 
-  void _saveImage() {
-    if (_capturedImage != null) {
-      Navigator.pop(context, _capturedImage);
-    }
+  @override
+  void dispose() {
+    _controller.dispose();
+    _poseDetector.close();
+    super.dispose();
   }
 
-  Widget _buildPreviewScreen() {
+  @override
+  Widget build(BuildContext context) {
+    if (!_isCameraInitialized) {
+      return const Scaffold(
+        body: Center(child: CircularProgressIndicator()),
+      );
+    }
+
     return Scaffold(
-      backgroundColor: Colors.black,
+      appBar: AppBar(
+        title: Text('${widget.viewType} 촬영'),
+        backgroundColor: const Color(0xFF4A55E7),
+      ),
       body: Stack(
         children: [
-          Center(
-            child: Image.file(
-              File(_capturedImage!.path),
-              fit: BoxFit.contain,
-            ),
+          FutureBuilder<void>(
+            future: _initializeControllerFuture,
+            builder: (context, snapshot) {
+              if (snapshot.connectionState == ConnectionState.done) {
+                return CameraPreview(_controller);
+              } else {
+                return const Center(child: CircularProgressIndicator());
+              }
+            },
           ),
-          Positioned(
-            bottom: 30,
-            left: 0,
-            right: 0,
+          _buildGuideOverlay(),
+          _buildControls(),
+        ],
+      ),
+      floatingActionButton: FloatingActionButton(
+        onPressed: () async {
+          final imagePath = await _takePicture();
+          if (imagePath != null && mounted) {
+            Navigator.pop(context, imagePath);
+          }
+        },
+        backgroundColor: const Color(0xFF4A55E7),
+        child: const Icon(Icons.camera_alt),
+      ),
+    );
+  }
+
+  Widget _buildGuideOverlay() {
+    return CustomPaint(
+      painter: GuidePainter(
+        showGrid: _showGrid,
+        isBalanced: _isBalanced,
+        horizontalBalance: _horizontalBalance,
+        verticalBalance: _verticalBalance,
+      ),
+      child: Container(),
+    );
+  }
+
+  Widget _buildControls() {
+    return SafeArea(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          AppBar(
+            backgroundColor: Colors.transparent,
+            elevation: 0,
+            leading: IconButton(
+              icon: const Icon(Icons.arrow_back, color: Colors.white),
+              onPressed: () => Navigator.pop(context),
+            ),
+            actions: [
+              IconButton(
+                icon: Icon(
+                  _showGrid ? Icons.grid_on : Icons.grid_off,
+                  color: Colors.white,
+                ),
+                onPressed: () {
+                  setState(() => _showGrid = !_showGrid);
+                },
+              ),
+            ],
+          ),
+          Padding(
+            padding: const EdgeInsets.all(16.0),
             child: Row(
               mainAxisAlignment: MainAxisAlignment.spaceEvenly,
               children: [
-                TextButton.icon(
-                  onPressed: _retakePicture,
-                  icon: const Icon(Icons.refresh, color: Colors.white),
-                  label: const Text(
-                    '다시 찍기',
-                    style: TextStyle(
-                      color: Colors.white,
-                      fontFamily: 'NotoSansKR',
-                    ),
-                  ),
-                ),
-                TextButton.icon(
-                  onPressed: _saveImage,
-                  icon: const Icon(Icons.check, color: Colors.green),
-                  label: const Text(
-                    '저장',
-                    style: TextStyle(
-                      color: Colors.green,
-                      fontFamily: 'NotoSansKR',
-                    ),
-                  ),
-                ),
+                _buildBalanceIndicator('수평', _horizontalBalance),
+                _buildCaptureButton(),
+                _buildBalanceIndicator('수직', _verticalBalance),
               ],
             ),
           ),
@@ -241,87 +246,133 @@ class _CameraScreenState extends State<CameraScreen> {
     );
   }
 
-  Widget _buildCameraUI() {
-    return Stack(
+  Widget _buildBalanceIndicator(String label, double value) {
+    final color = value.abs() < 0.1 ? Colors.green : Colors.red;
+    return Column(
       children: [
-        CameraPreview(_controller!),
-        _buildGridLines(),
-        _buildLevelIndicator(),
-        _buildGuidelineText(),
-        Positioned(
-          bottom: 30,
-          left: 0,
-          right: 0,
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-            children: [
-              IconButton(
-                icon: const Icon(Icons.close, color: Colors.white, size: 30),
-                onPressed: () => Navigator.pop(context),
-              ),
-              FloatingActionButton(
-                backgroundColor: Colors.white,
-                child: const Icon(Icons.camera_alt, color: Colors.black),
-                onPressed: _takePicture,
-              ),
-              IconButton(
-                icon: const Icon(Icons.flip_camera_ios, color: Colors.white, size: 30),
-                onPressed: _switchCamera,
-              ),
-            ],
+        Text(
+          label,
+          style: const TextStyle(color: Colors.white),
+        ),
+        const SizedBox(height: 4),
+        Container(
+          width: 40,
+          height: 40,
+          decoration: BoxDecoration(
+            color: color.withOpacity(0.3),
+            shape: BoxShape.circle,
+            border: Border.all(color: color),
+          ),
+          child: Center(
+            child: Text(
+              '${(value * 100).abs().toStringAsFixed(0)}%',
+              style: TextStyle(color: color),
+            ),
           ),
         ),
       ],
     );
   }
 
-  @override
-  void dispose() {
-    _controller?.dispose();
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    if (!_isInitialized) {
-      return const Scaffold(
-        body: Center(
-          child: CircularProgressIndicator(),
+  Widget _buildCaptureButton() {
+    return GestureDetector(
+      onTap: () async {
+        final imagePath = await _takePicture();
+        if (imagePath != null && mounted) {
+          Navigator.pop(context, imagePath);
+        }
+      },
+      child: Container(
+        width: 72,
+        height: 72,
+        decoration: BoxDecoration(
+          shape: BoxShape.circle,
+          border: Border.all(
+            color: _isBalanced ? Colors.green : Colors.red,
+            width: 4,
+          ),
         ),
-      );
-    }
-
-    if (_capturedImage != null) {
-      return _buildPreviewScreen();
-    }
-
-    return Scaffold(
-      backgroundColor: Colors.black,
-      body: _buildCameraUI(),
+        child: Center(
+          child: Container(
+            width: 60,
+            height: 60,
+            decoration: const BoxDecoration(
+              color: Colors.white,
+              shape: BoxShape.circle,
+            ),
+          ),
+        ),
+      ),
     );
   }
 }
 
-class GridPainter extends CustomPainter {
+class GuidePainter extends CustomPainter {
+  final bool showGrid;
+  final bool isBalanced;
+  final double horizontalBalance;
+  final double verticalBalance;
+
+  GuidePainter({
+    required this.showGrid,
+    required this.isBalanced,
+    required this.horizontalBalance,
+    required this.verticalBalance,
+  });
+
   @override
   void paint(Canvas canvas, Size size) {
+    final center = Offset(size.width / 2, size.height / 2);
     final paint = Paint()
-      ..color = Colors.white.withOpacity(0.3)
-      ..strokeWidth = 1;
+      ..color = isBalanced ? Colors.green : Colors.red
+      ..strokeWidth = 2
+      ..style = PaintingStyle.stroke;
 
-    // 수직선
-    for (int i = 1; i < 3; i++) {
-      final x = size.width * i / 3;
-      canvas.drawLine(Offset(x, 0), Offset(x, size.height), paint);
-    }
+    // 중심 십자선
+    canvas.drawLine(
+      Offset(center.dx - 30, center.dy),
+      Offset(center.dx + 30, center.dy),
+      paint,
+    );
+    canvas.drawLine(
+      Offset(center.dx, center.dy - 30),
+      Offset(center.dx, center.dy + 30),
+      paint,
+    );
 
-    // 수평선
-    for (int i = 1; i < 3; i++) {
-      final y = size.height * i / 3;
-      canvas.drawLine(Offset(0, y), Offset(size.width, y), paint);
+    if (showGrid) {
+      // 격자 무늬
+      final gridPaint = Paint()
+        ..color = Colors.white.withOpacity(0.3)
+        ..strokeWidth = 1;
+
+      // 수평선
+      for (var i = 1; i <= 2; i++) {
+        final y = size.height * (i / 3);
+        canvas.drawLine(
+          Offset(0, y),
+          Offset(size.width, y),
+          gridPaint,
+        );
+      }
+
+      // 수직선
+      for (var i = 1; i <= 2; i++) {
+        final x = size.width * (i / 3);
+        canvas.drawLine(
+          Offset(x, 0),
+          Offset(x, size.height),
+          gridPaint,
+        );
+      }
     }
   }
 
   @override
-  bool shouldRepaint(CustomPainter oldDelegate) => false;
+  bool shouldRepaint(GuidePainter oldDelegate) {
+    return showGrid != oldDelegate.showGrid ||
+        isBalanced != oldDelegate.isBalanced ||
+        horizontalBalance != oldDelegate.horizontalBalance ||
+        verticalBalance != oldDelegate.verticalBalance;
+  }
 } 

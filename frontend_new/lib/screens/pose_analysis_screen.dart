@@ -13,6 +13,9 @@ import 'dart:ui' as ui;
 import 'dart:math';
 import 'dart:convert';
 import 'package:intl/intl.dart';
+import 'package:go_router/go_router.dart';
+
+enum PoseType { front, side, back }
 
 class PoseAnalysisScreen extends StatefulWidget {
   const PoseAnalysisScreen({Key? key}) : super(key: key);
@@ -36,6 +39,7 @@ class _PoseAnalysisScreenState extends State<PoseAnalysisScreen> {
   bool _showHistory = false;
   bool _isLoading = false;
   String? _errorMessage;
+  PoseType? _selectedPoseType;
 
   @override
   void initState() {
@@ -436,24 +440,142 @@ class _PoseAnalysisScreenState extends State<PoseAnalysisScreen> {
     return Scaffold(
       appBar: AppBar(
         title: const Text('자세 분석'),
-        backgroundColor: Colors.blue,
-        actions: [
-          if (_feedback.isNotEmpty)
-            IconButton(
-              icon: const Icon(Icons.share),
-              onPressed: _saveAnalysisResult,
+        backgroundColor: Colors.white,
+        foregroundColor: Colors.black,
+        elevation: 0,
+      ),
+      body: _selectedPoseType == null
+          ? _buildPoseTypeSelection()
+          : _buildImageSelection(),
+    );
+  }
+
+  Widget _buildPoseTypeSelection() {
+    return Padding(
+      padding: const EdgeInsets.all(16.0),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          const Text(
+            '분석할 자세를 선택해주세요',
+            style: TextStyle(
+              fontSize: 18,
+              fontWeight: FontWeight.bold,
             ),
-          IconButton(
-            icon: const Icon(Icons.history),
-            onPressed: _showAnalysisHistory,
+          ),
+          const SizedBox(height: 20),
+          _buildPoseTypeButton(
+            '정면 (FRONT)',
+            PoseType.front,
+            '사람의 정면 사진을 촬영합니다.',
+          ),
+          const SizedBox(height: 16),
+          _buildPoseTypeButton(
+            '측면 (SIDE)',
+            PoseType.side,
+            '사람의 옆면 사진을 촬영합니다.',
+          ),
+          const SizedBox(height: 16),
+          _buildPoseTypeButton(
+            '후면 (BACK)',
+            PoseType.back,
+            '사람의 뒷모습 사진을 촬영합니다.',
           ),
         ],
       ),
-      body: _isLoading
-          ? const Center(child: CircularProgressIndicator())
-          : _showHistory
-              ? _buildHistoryView()
-              : _buildMainView(),
+    );
+  }
+
+  Widget _buildPoseTypeButton(String title, PoseType type, String description) {
+    return ElevatedButton(
+      onPressed: () {
+        setState(() {
+          _selectedPoseType = type;
+        });
+      },
+      style: ElevatedButton.styleFrom(
+        padding: const EdgeInsets.all(16),
+        backgroundColor: Colors.white,
+        foregroundColor: Colors.black,
+        elevation: 2,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(12),
+        ),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            title,
+            style: const TextStyle(
+              fontSize: 16,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            description,
+            style: const TextStyle(
+              fontSize: 14,
+              color: Colors.grey,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildImageSelection() {
+    return Padding(
+      padding: const EdgeInsets.all(16.0),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Text(
+            '${_selectedPoseType.toString().split('.').last.toUpperCase()} 자세 분석',
+            style: const TextStyle(
+              fontSize: 18,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+          const SizedBox(height: 20),
+          ElevatedButton.icon(
+            onPressed: () {
+              context.push('/camera', extra: {
+                'poseType': _selectedPoseType,
+              });
+            },
+            icon: const Icon(Icons.camera_alt),
+            label: const Text('사진 촬영'),
+            style: ElevatedButton.styleFrom(
+              padding: const EdgeInsets.all(16),
+              backgroundColor: Colors.blue,
+              foregroundColor: Colors.white,
+            ),
+          ),
+          const SizedBox(height: 16),
+          ElevatedButton.icon(
+            onPressed: () => _pickImage(ImageSource.gallery),
+            icon: const Icon(Icons.photo_library),
+            label: const Text('갤러리에서 선택'),
+            style: ElevatedButton.styleFrom(
+              padding: const EdgeInsets.all(16),
+              backgroundColor: Colors.grey[200],
+              foregroundColor: Colors.black,
+            ),
+          ),
+          const SizedBox(height: 16),
+          TextButton.icon(
+            onPressed: () {
+              setState(() {
+                _selectedPoseType = null;
+              });
+            },
+            icon: const Icon(Icons.arrow_back),
+            label: const Text('뒤로가기'),
+          ),
+        ],
+      ),
     );
   }
 

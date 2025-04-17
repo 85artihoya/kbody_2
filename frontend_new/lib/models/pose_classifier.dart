@@ -1,6 +1,17 @@
+import 'package:flutter/material.dart';
 import 'package:google_mlkit_pose_detection/google_mlkit_pose_detection.dart';
 import 'dart:math' as math;
 import 'pose_type.dart';
+
+class ClassificationResult {
+  final PoseType poseType;
+  final Map<String, double> angles;
+
+  ClassificationResult({
+    required this.poseType,
+    required this.angles,
+  });
+}
 
 class PoseClassifier {
   // 자세 유형별 특징 벡터
@@ -45,19 +56,6 @@ class PoseClassifier {
     PoseType.bridge: [0.4, 0.4, 0.2],
   };
 
-  // 자세 분류 결과
-  class ClassificationResult {
-    final PoseType poseType;
-    final double confidence;
-    final Map<String, double> angles;
-
-    ClassificationResult({
-      required this.poseType,
-      required this.confidence,
-      required this.angles,
-    });
-  }
-
   // 자세 분류 수행
   ClassificationResult classifyPose(Pose pose) {
     // 관절 각도 계산
@@ -86,7 +84,6 @@ class PoseClassifier {
 
     return ClassificationResult(
       poseType: maxScore >= 0.7 ? detectedType : PoseType.unknown,
-      confidence: maxScore,
       angles: angles,
     );
   }
@@ -103,12 +100,7 @@ class PoseClassifier {
 
     if (leftShoulder != null && rightShoulder != null && 
         leftHip != null && rightHip != null) {
-      angles['shoulder_angle'] = _calculateAngle(
-        leftShoulder,
-        rightShoulder,
-        leftHip,
-        rightHip,
-      );
+      angles['shoulder_angle'] = _calculateShoulderAngle(leftShoulder, rightShoulder, leftHip, rightHip);
     }
 
     // 팔꿈치 각도
@@ -198,23 +190,29 @@ class PoseClassifier {
   }
 
   // 각도 계산
-  double _calculateAngle(PoseLandmark a, PoseLandmark b, PoseLandmark c, [PoseLandmark? d]) {
-    if (d != null) {
-      final vector1 = Offset(b.x - a.x, b.y - a.y);
-      final vector2 = Offset(d.x - c.x, d.y - c.y);
-      final dotProduct = vector1.dx * vector2.dx + vector1.dy * vector2.dy;
-      final magnitude1 = math.sqrt(vector1.dx * vector1.dx + vector1.dy * vector1.dy);
-      final magnitude2 = math.sqrt(vector2.dx * vector2.dx + vector2.dy * vector2.dy);
-      final angle = math.acos(dotProduct / (magnitude1 * magnitude2));
-      return angle * 180 / math.pi;
-    } else {
-      final vector1 = Offset(b.x - a.x, b.y - a.y);
-      final vector2 = Offset(c.x - b.x, c.y - b.y);
-      final dotProduct = vector1.dx * vector2.dx + vector1.dy * vector2.dy;
-      final magnitude1 = math.sqrt(vector1.dx * vector1.dx + vector1.dy * vector1.dy);
-      final magnitude2 = math.sqrt(vector2.dx * vector2.dx + vector2.dy * vector2.dy);
-      final angle = math.acos(dotProduct / (magnitude1 * magnitude2));
-      return angle * 180 / math.pi;
-    }
+  double _calculateAngle(PoseLandmark a, PoseLandmark b, PoseLandmark c) {
+    final vector1 = Offset(b.x - a.x, b.y - a.y);
+    final vector2 = Offset(c.x - b.x, c.y - b.y);
+
+    final dotProduct = vector1.dx * vector2.dx + vector1.dy * vector2.dy;
+    final magnitude1 = math.sqrt(vector1.dx * vector1.dx + vector1.dy * vector1.dy);
+    final magnitude2 = math.sqrt(vector2.dx * vector2.dx + vector2.dy * vector2.dy);
+
+    final cosTheta = dotProduct / (magnitude1 * magnitude2);
+    final theta = math.acos(cosTheta.clamp(-1.0, 1.0));
+    return theta * 180 / math.pi;
+  }
+
+  double _calculateShoulderAngle(PoseLandmark leftShoulder, PoseLandmark rightShoulder, PoseLandmark leftHip, PoseLandmark rightHip) {
+    final vector1 = Offset(rightShoulder.x - leftShoulder.x, rightShoulder.y - leftShoulder.y);
+    final vector2 = Offset(rightHip.x - leftHip.x, rightHip.y - leftHip.y);
+
+    final dotProduct = vector1.dx * vector2.dx + vector1.dy * vector2.dy;
+    final magnitude1 = math.sqrt(vector1.dx * vector1.dx + vector1.dy * vector1.dy);
+    final magnitude2 = math.sqrt(vector2.dx * vector2.dx + vector2.dy * vector2.dy);
+
+    final cosTheta = dotProduct / (magnitude1 * magnitude2);
+    final theta = math.acos(cosTheta.clamp(-1.0, 1.0));
+    return theta * 180 / math.pi;
   }
 } 

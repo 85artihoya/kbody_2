@@ -13,6 +13,9 @@ import 'package:frontend_new/screens/gmfcs_selection_screen.dart';
 import 'package:frontend_new/screens/developmental_type_screen.dart';
 import 'package:frontend_new/screens/other_disability_screen.dart';
 import 'package:frontend_new/screens/register_complete_screen.dart';
+import 'package:frontend_new/screens/camera_screen.dart';
+import 'package:frontend_new/screens/image_crop_screen.dart';
+import 'package:frontend_new/screens/analysis_screen.dart';
 
 class Routes {
   static const String login = '/login';
@@ -24,6 +27,10 @@ class Routes {
   static const String otherDisability = '/other-disability';
   static const String registerComplete = '/register-complete';
   static const String home = '/home';
+  static const String poseAnalysis = '/pose-analysis';
+  static const String camera = '/camera';
+  static const String crop = '/crop';
+  static const String analysis = '/analysis';
 
   static List<GoRoute> getRoutes() {
     return [
@@ -86,6 +93,33 @@ class Routes {
       GoRoute(
         path: home,
         builder: (context, state) => const HomeScreen(),
+      ),
+      GoRoute(
+        path: poseAnalysis,
+        builder: (context, state) => const PoseAnalysisScreen(),
+      ),
+      GoRoute(
+        path: camera,
+        builder: (context, state) {
+          final extra = state.extra as Map<String, dynamic>;
+          return CameraScreen(
+            viewType: extra['viewType'] as String,
+          );
+        },
+      ),
+      GoRoute(
+        path: crop,
+        builder: (context, state) {
+          final extra = state.extra as Map<String, dynamic>;
+          return ImageCropScreen(
+            imagePath: extra['imagePath'] as String,
+            poseType: extra['poseType'] as PoseType,
+          );
+        },
+      ),
+      GoRoute(
+        path: analysis,
+        builder: (context, state) => const AnalysisScreen(),
       ),
     ];
   }

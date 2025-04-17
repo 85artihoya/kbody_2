@@ -4,6 +4,13 @@ import 'package:provider/provider.dart';
 import '../services/pose_service.dart';
 import '../services/pose_evaluation_service.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:google_mlkit_pose_detection/google_mlkit_pose_detection.dart';
+import 'package:camera/camera.dart';
+import 'package:path_provider/path_provider.dart';
+import 'dart:math' as math;
+import 'package:frontend_new/services/pose_evaluation_service.dart';
+import 'package:frontend_new/models/pose_classifier.dart';
+import 'camera_screen.dart';
 
 enum BodyView {
   front('FRONT', 'front_angle', 'home_Front_Back_body'),
@@ -107,7 +114,7 @@ class _AnalysisScreenState extends State<AnalysisScreen> {
 
   Future<void> _takePicture() async {
     try {
-      final result = await Navigator.push<XFile>(
+      final result = await Navigator.push<String>(
         context,
         MaterialPageRoute(
           builder: (context) => CameraScreen(
@@ -118,7 +125,7 @@ class _AnalysisScreenState extends State<AnalysisScreen> {
       
       if (result != null) {
         setState(() {
-          _selectedImages[_selectedView] = File(result.path);
+          _selectedImages[_selectedView] = File(result);
         });
       }
     } catch (e) {
@@ -253,7 +260,7 @@ class _AnalysisScreenState extends State<AnalysisScreen> {
                 // TODO: 분석 결과 화면으로 이동
               } : null,
               style: ElevatedButton.styleFrom(
-                primary: const Color(0xFF4A55E7),
+                backgroundColor: const Color(0xFF4A55E7),
                 padding: const EdgeInsets.symmetric(vertical: 16),
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(8),
@@ -294,25 +301,18 @@ class _AnalysisScreenState extends State<AnalysisScreen> {
 
 class PosePainter extends CustomPainter {
   final Pose pose;
+  final Size size;
 
-  PosePainter(this.pose);
+  PosePainter(this.pose, this.size);
 
   @override
   void paint(Canvas canvas, Size size) {
     final paint = Paint()
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = 2.0
-      ..color = Colors.blue;
+      ..color = Colors.blue
+      ..strokeWidth = 4.0
+      ..style = PaintingStyle.stroke;
 
-    for (final landmark in pose.landmarks.values) {
-      canvas.drawCircle(
-        Offset(landmark.x, landmark.y),
-        4.0,
-        paint,
-      );
-    }
-
-    // 관절 연결선 그리기
+    // Draw lines between landmarks
     _drawLine(canvas, paint, pose.landmarks[PoseLandmarkType.leftShoulder],
         pose.landmarks[PoseLandmarkType.leftElbow]);
     _drawLine(canvas, paint, pose.landmarks[PoseLandmarkType.leftElbow],
@@ -321,14 +321,14 @@ class PosePainter extends CustomPainter {
         pose.landmarks[PoseLandmarkType.rightElbow]);
     _drawLine(canvas, paint, pose.landmarks[PoseLandmarkType.rightElbow],
         pose.landmarks[PoseLandmarkType.rightWrist]);
-    // 추가적인 연결선은 필요에 따라 구현
   }
 
   void _drawLine(Canvas canvas, Paint paint, PoseLandmark? start, PoseLandmark? end) {
     if (start == null || end == null) return;
+    
     canvas.drawLine(
-      Offset(start.x, start.y),
-      Offset(end.x, end.y),
+      Offset(start.x * size.width, start.y * size.height),
+      Offset(end.x * size.width, end.y * size.height),
       paint,
     );
   }
