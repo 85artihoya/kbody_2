@@ -114,6 +114,9 @@ def register():
             'detail_address': data.get('detail_address'),
             'user_type': data['user_type'],
             'disability_type': data.get('disability_type'),
+            'gmfcs_level': data.get('gmfcs_level'),
+            'developmental_type': data.get('developmental_type'),
+            'other_disability_name': data.get('other_disability_name'),
             'disability_detail': data.get('disability_detail')
         }
 

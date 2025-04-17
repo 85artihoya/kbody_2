@@ -127,6 +127,7 @@ class AuthService extends ChangeNotifier {
     try {
       print('=== Registration Debug Info ===');
       print('API URL: $baseUrl');
+      print('Original userData: $userData'); // 원본 데이터 로깅
       
       // 데이터 구조 변환
       final requestData = {
@@ -139,10 +140,12 @@ class AuthService extends ChangeNotifier {
         'detail_address': userData['detail_address'],
         'user_type': userData['user_type'] ?? 'disabled',
         'disability_type': userData['disability_type'] ?? '',
-        'gmfcs_level': userData['gmfcs_level'] ?? '',
+        'gmfcs_level': userData['gmfcs_level'], // null 병합 연산자 제거
+        'developmental_type': userData['developmental_type'] ?? '',
+        'other_disability_name': userData['other_disability_name'] ?? '',
       };
       
-      print('Request Data: ${jsonEncode(requestData)}');
+      print('Processed requestData: $requestData'); // 가공된 데이터 로깅
       
       final client = http.Client();
       try {

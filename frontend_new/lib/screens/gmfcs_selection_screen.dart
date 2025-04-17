@@ -141,10 +141,15 @@ class _GmfcsSelectionScreenState extends State<GmfcsSelectionScreen> {
     try {
       // 회원 정보에 GMFCS 레벨 추가
       final registerData = Map<String, dynamic>.from(widget.registerData);
-      registerData['gmfcs_level'] = _selectedLevel;
-      registerData['user_type'] = 'disabled';  // 명시적으로 user_type 설정
       
-      print('Final registration data: $registerData');
+      print('Original registerData: $registerData'); // 원본 데이터 로깅
+      
+      // GMFCS 레벨 설정
+      registerData['gmfcs_level'] = _selectedLevel!.trim();
+      registerData['user_type'] = 'disabled';
+      registerData['disability_type'] = '뇌병변장애';
+      
+      print('Modified registerData: $registerData'); // 수정된 데이터 로깅
 
       // 회원가입 수행
       await context.read<AuthProvider>().register(registerData);
@@ -153,6 +158,7 @@ class _GmfcsSelectionScreenState extends State<GmfcsSelectionScreen> {
         context.go('/register-complete');
       }
     } catch (e) {
+      print('Registration error: $e'); // 에러 로깅
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text(e.toString())),
