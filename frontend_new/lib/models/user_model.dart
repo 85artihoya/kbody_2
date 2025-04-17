@@ -10,6 +10,7 @@ class User {
   final String? gmfcsLevel;
   final String? developmentalType;
   final String? otherDisabilityName;
+  final String userType;
 
   User({
     required this.id,
@@ -23,6 +24,7 @@ class User {
     this.gmfcsLevel,
     this.developmentalType,
     this.otherDisabilityName,
+    this.userType = 'disabled',
   });
 
   factory User.fromJson(Map<String, dynamic> json) {
@@ -40,6 +42,7 @@ class User {
       gmfcsLevel: json['gmfcs_level']?.toString(),
       developmentalType: json['developmental_type']?.toString(),
       otherDisabilityName: json['other_disability_name']?.toString(),
+      userType: json['user_type']?.toString() ?? 'disabled',
     );
   }
 
@@ -56,6 +59,7 @@ class User {
       'gmfcs_level': gmfcsLevel,
       'developmental_type': developmentalType,
       'other_disability_name': otherDisabilityName,
+      'user_type': userType,
     };
   }
 }

@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:go_router/go_router.dart';
-import 'package:frontend_new/services/auth_service.dart';
-import 'package:frontend_new/providers/auth_provider.dart';
-import 'package:frontend_new/routes/routes.dart';
+import 'providers/auth_provider.dart';
+import 'services/auth_service.dart';
+import 'routes/routes.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 
 void main() async {
@@ -13,27 +13,21 @@ void main() async {
 }
 
 class MyApp extends StatelessWidget {
-  const MyApp({Key? key}) : super(key: key);
+  const MyApp({super.key});
 
   @override
   Widget build(BuildContext context) {
-    final authService = AuthService();
-    
     return MultiProvider(
       providers: [
-        ChangeNotifierProvider<AuthService>.value(
-          value: authService,
-        ),
-        ChangeNotifierProxyProvider<AuthService, AuthProvider>(
-          create: (_) => AuthProvider(authService),
-          update: (_, auth, previous) => previous ?? AuthProvider(auth),
+        ChangeNotifierProvider(
+          create: (_) => AuthProvider(AuthService()),
         ),
       ],
       child: MaterialApp.router(
         title: 'K-Body',
         theme: ThemeData(
           primarySwatch: Colors.blue,
-          visualDensity: VisualDensity.adaptivePlatformDensity,
+          useMaterial3: true,
         ),
         routerConfig: Routes.router,
       ),

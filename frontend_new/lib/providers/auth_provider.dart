@@ -14,7 +14,7 @@ class AuthProvider extends ChangeNotifier {
   bool get isLoading => _isLoading;
   User? get user => _user;
 
-  Future<void> login(String email, String password) async {
+  Future<User> login(String email, String password) async {
     _isLoading = true;
     notifyListeners();
 
@@ -23,6 +23,7 @@ class AuthProvider extends ChangeNotifier {
       _token = response['token'] as String;
       _user = User.fromJson(response['user'] as Map<String, dynamic>);
       notifyListeners();
+      return _user!;
     } finally {
       _isLoading = false;
       notifyListeners();

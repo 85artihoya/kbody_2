@@ -96,7 +96,9 @@ class AuthService extends ChangeNotifier {
               gmfcsLevel: userData['gmfcs_level']?.toString() ?? '',
               developmentalType: userData['developmental_type']?.toString() ?? '',
               otherDisabilityName: userData['other_disability_name']?.toString() ?? '',
+              userType: userData['user_type']?.toString() ?? 'disabled',
             );
+            print('Created user object: ${_user?.toJson()}');
           } catch (e) {
             print('Error creating User object: $e');
             print('User data that caused error: $userData');
@@ -135,9 +137,9 @@ class AuthService extends ChangeNotifier {
         'birth_date': userData['birth_date'],
         'address': userData['address'],
         'detail_address': userData['detail_address'],
-        'user_type': 'disabled',
+        'user_type': userData['user_type'] ?? 'disabled',
         'disability_type': userData['disability_type'] ?? '',
-        'disability_detail': userData['disability_detail'] ?? '',
+        'gmfcs_level': userData['gmfcs_level'] ?? '',
       };
       
       print('Request Data: ${jsonEncode(requestData)}');
@@ -181,9 +183,10 @@ class AuthService extends ChangeNotifier {
           
           // 토큰 저장
           if (data['token'] != null) {
+            _token = data['token'];
             final prefs = await SharedPreferences.getInstance();
             await prefs.setString('token', data['token']);
-            print('Token saved to SharedPreferences');
+            print('Token saved: $_token');
           }
           return data;
         } else {
@@ -301,6 +304,10 @@ class AuthService extends ChangeNotifier {
       print('=== Update Disability Info Debug ===');
       print('API URL: $baseUrl');
       
+      if (_token == null) {
+        throw Exception('로그인이 필요합니다.');
+      }
+
       final Map<String, dynamic> disabilityData = {
         'disability_type': disabilityType,
         if (otherDisabilityName != null) 'other_disability_name': otherDisabilityName,
@@ -309,12 +316,15 @@ class AuthService extends ChangeNotifier {
       };
       
       print('Request Data: $disabilityData');
+      print('Token: $_token');
 
-      final response = await http.patch(
-        Uri.parse('$baseUrl/auth/update-disability'),
+      // HTTP 클라이언트 생성
+      final response = await http.post(  // PUT 대신 POST 사용
+        Uri.parse('$baseUrl/auth/users/update-disability'),  // 엔드포인트 수정
         headers: {
           'Content-Type': 'application/json',
           'Authorization': 'Bearer $_token',
+          'Accept': 'application/json',
         },
         body: jsonEncode(disabilityData),
       );
@@ -322,7 +332,7 @@ class AuthService extends ChangeNotifier {
       print('Response status code: ${response.statusCode}');
       print('Response body: ${response.body}');
 
-      if (response.statusCode == 200) {
+      if (response.statusCode == 200 || response.statusCode == 201) {
         final responseData = jsonDecode(response.body);
         if (responseData['user'] != null) {
           _user = User.fromJson(responseData['user']);
@@ -330,11 +340,17 @@ class AuthService extends ChangeNotifier {
         }
         return responseData;
       } else {
+        if (response.body.startsWith('<!doctype html>')) {
+          throw Exception('서버 응답이 올바르지 않습니다. 서버 상태를 확인해주세요.');
+        }
         final errorData = jsonDecode(response.body);
         throw Exception(errorData['error'] ?? '장애 정보 업데이트에 실패했습니다.');
       }
     } catch (e) {
       print('Update disability info error: $e');
+      if (e.toString().contains('<!doctype html>')) {
+        throw Exception('서버 연결에 실패했습니다. 서버 상태를 확인해주세요.');
+      }
       throw Exception('장애 정보 업데이트 중 오류가 발생했습니다: $e');
     }
   }

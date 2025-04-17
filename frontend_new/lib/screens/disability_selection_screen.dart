@@ -2,9 +2,15 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 import '../providers/auth_provider.dart';
+import '../services/auth_service.dart';
 
 class DisabilitySelectionScreen extends StatefulWidget {
-  const DisabilitySelectionScreen({super.key});
+  final Map<String, dynamic> registerData;
+
+  const DisabilitySelectionScreen({
+    Key? key,
+    required this.registerData,
+  }) : super(key: key);
 
   @override
   State<DisabilitySelectionScreen> createState() => _DisabilitySelectionScreenState();
@@ -12,12 +18,66 @@ class DisabilitySelectionScreen extends StatefulWidget {
 
 class _DisabilitySelectionScreenState extends State<DisabilitySelectionScreen> {
   String? _selectedType;
+  bool _isLoading = false;
+
+  void _handleSelection(String type) async {
+    setState(() {
+      _selectedType = type;
+    });
+  }
+
+  void _handleNext() async {
+    if (_selectedType == null) return;
+
+    setState(() {
+      _isLoading = true;
+    });
+
+    try {
+      print('Selected type: $_selectedType');
+      print('Register data before: ${widget.registerData}');
+      
+      final updatedData = Map<String, dynamic>.from(widget.registerData);
+      updatedData['disability_type'] = _selectedType;
+      
+      print('Updated register data: $updatedData');
+
+      switch (_selectedType) {
+        case '뇌병변장애':
+          context.go('/gmfcs-selection', extra: updatedData);
+          break;
+        case '발달장애':
+          context.go('/developmental-type', extra: updatedData);
+          break;
+        case '기타장애':
+          context.go('/other-disability', extra: updatedData);
+          break;
+        case '비장애':
+          // 비장애인 경우 바로 회원가입 진행
+          final authService = Provider.of<AuthService>(context, listen: false);
+          await authService.register(updatedData);
+          context.go('/register-complete');
+          break;
+      }
+    } catch (e) {
+      print('Error in _handleSelection: $e');
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('장애 유형 선택 중 오류가 발생했습니다.')),
+      );
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+        });
+      }
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('세부 정보 입력'),
+        title: const Text('장애 유형 선택'),
         leading: IconButton(
           icon: const Icon(Icons.arrow_back),
           onPressed: () => context.pop(),
@@ -30,7 +90,7 @@ class _DisabilitySelectionScreenState extends State<DisabilitySelectionScreen> {
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
               const Text(
-                '정확한 측정을 위해 해당 정보를 체크해주세요',
+                '장애 유형을 선택해주세요',
                 style: TextStyle(
                   fontSize: 16,
                   fontWeight: FontWeight.bold,
@@ -38,65 +98,19 @@ class _DisabilitySelectionScreenState extends State<DisabilitySelectionScreen> {
                 textAlign: TextAlign.center,
               ),
               const SizedBox(height: 32),
-              ElevatedButton(
-                onPressed: () {
-                  setState(() {
-                    _selectedType = 'disabled';
-                  });
-                },
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: _selectedType == 'disabled' 
-                    ? const Color(0xFF4A55E7) 
-                    : Colors.grey[300],
-                  foregroundColor: _selectedType == 'disabled' 
-                    ? Colors.white 
-                    : Colors.black,
-                  padding: const EdgeInsets.symmetric(vertical: 16),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                ),
-                child: const Text(
-                  '장애',
-                  style: TextStyle(fontSize: 16),
+              Expanded(
+                child: ListView(
+                  children: [
+                    _buildSelectionTile('뇌병변장애'),
+                    _buildSelectionTile('발달장애'),
+                    _buildSelectionTile('기타장애'),
+                    _buildSelectionTile('비장애'),
+                  ],
                 ),
               ),
               const SizedBox(height: 16),
               ElevatedButton(
-                onPressed: () {
-                  setState(() {
-                    _selectedType = 'non-disabled';
-                  });
-                },
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: _selectedType == 'non-disabled' 
-                    ? const Color(0xFF4A55E7) 
-                    : Colors.grey[300],
-                  foregroundColor: _selectedType == 'non-disabled' 
-                    ? Colors.white 
-                    : Colors.black,
-                  padding: const EdgeInsets.symmetric(vertical: 16),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                ),
-                child: const Text(
-                  '비장애',
-                  style: TextStyle(fontSize: 16),
-                ),
-              ),
-              const Spacer(),
-              ElevatedButton(
-                onPressed: _selectedType == null 
-                  ? null 
-                  : () {
-                      if (_selectedType == 'disabled') {
-                        context.go('/disability-type');
-                      } else {
-                        // 비장애인 선택 시 바로 회원가입 완료 페이지로 이동
-                        context.go('/register-complete');
-                      }
-                    },
+                onPressed: _selectedType == null || _isLoading ? null : _handleNext,
                 style: ElevatedButton.styleFrom(
                   backgroundColor: const Color(0xFF4A55E7),
                   foregroundColor: Colors.white,
@@ -106,12 +120,52 @@ class _DisabilitySelectionScreenState extends State<DisabilitySelectionScreen> {
                   ),
                   disabledBackgroundColor: Colors.grey[300],
                 ),
-                child: const Text(
-                  '다음',
-                  style: TextStyle(fontSize: 16),
-                ),
+                child: _isLoading
+                  ? const SizedBox(
+                      width: 24,
+                      height: 24,
+                      child: CircularProgressIndicator(
+                        color: Colors.white,
+                        strokeWidth: 2,
+                      ),
+                    )
+                  : const Text(
+                      '다음',
+                      style: TextStyle(fontSize: 16),
+                    ),
               ),
             ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildSelectionTile(String type) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 16.0),
+      child: InkWell(
+        onTap: () => _handleSelection(type),
+        child: Container(
+          padding: const EdgeInsets.all(16.0),
+          decoration: BoxDecoration(
+            border: Border.all(
+              color: _selectedType == type
+                ? const Color(0xFF4A55E7)
+                : Colors.grey[300]!,
+              width: 2,
+            ),
+            borderRadius: BorderRadius.circular(8),
+          ),
+          child: Text(
+            type,
+            style: TextStyle(
+              fontSize: 16,
+              fontWeight: FontWeight.bold,
+              color: _selectedType == type
+                ? const Color(0xFF4A55E7)
+                : Colors.black,
+            ),
           ),
         ),
       ),

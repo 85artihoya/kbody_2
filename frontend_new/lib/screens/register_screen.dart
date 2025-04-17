@@ -96,16 +96,13 @@ class _RegisterScreenState extends State<RegisterScreen> {
         'address': _address!,
         'detail_address': _detailAddressController.text.isEmpty ? null : _detailAddressController.text,
         'user_type': 'disabled',
-        'disability_type': null,
-        'disability_detail': null
       };
 
-      print('Registration request data: $registerData');  // 디버깅을 위한 로그 추가
-
-      await context.read<AuthProvider>().register(registerData);
+      print('Registration data prepared: $registerData');
 
       if (mounted) {
-        context.go('/disability-selection');
+        // 회원 정보를 장애 선택 화면으로 전달
+        context.go('/disability-selection', extra: registerData);
       }
     } catch (e) {
       if (mounted) {
@@ -342,7 +339,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                             ),
                           )
                         : const Text(
-                            '가입하기',
+                            '다음',
                             style: TextStyle(
                               fontSize: 16,
                               fontWeight: FontWeight.w500,

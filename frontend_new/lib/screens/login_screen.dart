@@ -14,6 +14,7 @@ class _LoginScreenState extends State<LoginScreen> {
   final _formKey = GlobalKey<FormState>();
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
+  bool _isLoading = false;
 
   @override
   void dispose() {
@@ -22,28 +23,45 @@ class _LoginScreenState extends State<LoginScreen> {
     super.dispose();
   }
 
-  Future<void> _handleLogin() async {
-    if (!_formKey.currentState!.validate()) return;
+  void _handleLogin() async {
+    if (_formKey.currentState!.validate()) {
+      setState(() {
+        _isLoading = true;
+      });
 
-    try {
-      await context.read<AuthProvider>().login(
-        _emailController.text,
-        _passwordController.text,
-      );
+      try {
+        final email = _emailController.text;
+        final password = _passwordController.text;
+        final authProvider = context.read<AuthProvider>();
 
-      if (mounted) {
-        final user = context.read<AuthProvider>().user;
-        if (user != null && (user.disabilityType?.isNotEmpty ?? false)) {
-          context.go('/home');
-        } else {
-          context.go('/disability-selection');
+        final user = await authProvider.login(email, password);
+
+        print('=== Login Routing Debug ===');
+        print('User type: ${user.userType}');
+        print('Disability type: ${user.disabilityType}');
+        print('User data: ${user.toJson()}');
+
+        if (mounted) {
+          if (user.userType == 'disabled' && (user.disabilityType?.isEmpty ?? true)) {
+            print('Navigating to disability selection screen');
+            context.go('/disability-selection', extra: user.toJson());
+          } else {
+            print('Navigating to home screen');
+            context.go('/home');
+          }
         }
-      }
-    } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(e.toString())),
-        );
+      } catch (e) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text(e.toString())),
+          );
+        }
+      } finally {
+        if (mounted) {
+          setState(() {
+            _isLoading = false;
+          });
+        }
       }
     }
   }

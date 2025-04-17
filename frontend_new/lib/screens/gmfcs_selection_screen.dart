@@ -4,7 +4,12 @@ import 'package:provider/provider.dart';
 import '../providers/auth_provider.dart';
 
 class GmfcsSelectionScreen extends StatefulWidget {
-  const GmfcsSelectionScreen({super.key});
+  final Map<String, dynamic> registerData;
+  
+  const GmfcsSelectionScreen({
+    super.key,
+    required this.registerData,
+  });
 
   @override
   State<GmfcsSelectionScreen> createState() => _GmfcsSelectionScreenState();
@@ -65,7 +70,7 @@ class _GmfcsSelectionScreenState extends State<GmfcsSelectionScreen> {
                           child: Column(
                             children: [
                               Image.asset(
-                                'assets/images/GMFCS_$level.png',
+                                'assets/images/drawable-xxxhdpi/GMFCS_$level.png',
                                 height: 200,
                                 fit: BoxFit.cover,
                               ),
@@ -94,30 +99,7 @@ class _GmfcsSelectionScreenState extends State<GmfcsSelectionScreen> {
                 onPressed: _selectedLevel == null || _isLoading
                   ? null
                   : () async {
-                      setState(() {
-                        _isLoading = true;
-                      });
-                      try {
-                        await context.read<AuthProvider>().updateDisabilityInfo(
-                          disabilityType: '뇌병변',
-                          gmfcsLevel: _selectedLevel,
-                        );
-                        if (mounted) {
-                          context.go('/register-complete');
-                        }
-                      } catch (e) {
-                        if (mounted) {
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            SnackBar(content: Text(e.toString())),
-                          );
-                        }
-                      } finally {
-                        if (mounted) {
-                          setState(() {
-                            _isLoading = false;
-                          });
-                        }
-                      }
+                      await _handleSave();
                     },
                 style: ElevatedButton.styleFrom(
                   backgroundColor: const Color(0xFF4A55E7),
@@ -147,5 +129,41 @@ class _GmfcsSelectionScreenState extends State<GmfcsSelectionScreen> {
         ),
       ),
     );
+  }
+
+  Future<void> _handleSave() async {
+    if (_selectedLevel == null || _isLoading) return;
+
+    setState(() {
+      _isLoading = true;
+    });
+
+    try {
+      // 회원 정보에 GMFCS 레벨 추가
+      final registerData = Map<String, dynamic>.from(widget.registerData);
+      registerData['gmfcs_level'] = _selectedLevel;
+      registerData['user_type'] = 'disabled';  // 명시적으로 user_type 설정
+      
+      print('Final registration data: $registerData');
+
+      // 회원가입 수행
+      await context.read<AuthProvider>().register(registerData);
+
+      if (mounted) {
+        context.go('/register-complete');
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(e.toString())),
+        );
+      }
+    
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+        });
+      }
+    }
   }
 } 

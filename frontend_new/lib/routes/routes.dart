@@ -15,61 +15,71 @@ import 'package:frontend_new/screens/other_disability_screen.dart';
 import 'package:frontend_new/screens/register_complete_screen.dart';
 
 class Routes {
-  static final router = GoRouter(
-    initialLocation: '/login',
-    routes: [
+  static const String login = '/login';
+  static const String register = '/register';
+  static const String disabilitySelection = '/disability-selection';
+  static const String disabilityType = '/disability-type';
+  static const String gmfcsSelection = '/gmfcs-selection';
+  static const String developmentalType = '/developmental-type';
+  static const String otherDisability = '/other-disability';
+  static const String registerComplete = '/register-complete';
+  static const String home = '/home';
+
+  static List<GoRoute> getRoutes() {
+    return [
       GoRoute(
-        path: '/',
-        builder: (context, state) => const HomeScreen(),
-      ),
-      GoRoute(
-        path: '/login',
+        path: login,
         builder: (context, state) => const LoginScreen(),
       ),
       GoRoute(
-        path: '/register',
+        path: register,
         builder: (context, state) => const RegisterScreen(),
       ),
       GoRoute(
-        path: '/pose-analysis',
-        builder: (context, state) => const PoseAnalysisScreen(),
+        path: disabilitySelection,
+        builder: (context, state) {
+          final registerData = state.extra as Map<String, dynamic>?;
+          if (registerData == null) {
+            return const LoginScreen();
+          }
+          return DisabilitySelectionScreen(registerData: registerData);
+        },
       ),
       GoRoute(
-        path: '/exercise',
-        builder: (context, state) => const ExerciseScreen(),
-      ),
-      GoRoute(
-        path: '/statistics',
-        builder: (context, state) => const StatisticsScreen(),
-      ),
-      GoRoute(
-        path: '/settings',
-        builder: (context, state) => const SettingsScreen(),
-      ),
-      GoRoute(
-        path: '/disability-selection',
-        builder: (context, state) => const DisabilitySelectionScreen(),
-      ),
-      GoRoute(
-        path: '/disability-type',
+        path: disabilityType,
         builder: (context, state) => const DisabilityTypeScreen(),
       ),
       GoRoute(
-        path: '/gmfcs-selection',
-        builder: (context, state) => const GmfcsSelectionScreen(),
+        path: gmfcsSelection,
+        builder: (context, state) {
+          final registerData = state.extra as Map<String, dynamic>?;
+          if (registerData == null) {
+            return const LoginScreen();
+          }
+          return GmfcsSelectionScreen(registerData: registerData);
+        },
       ),
       GoRoute(
-        path: '/developmental-type',
+        path: developmentalType,
         builder: (context, state) => const DevelopmentalTypeScreen(),
       ),
       GoRoute(
-        path: '/other-disability',
+        path: otherDisability,
         builder: (context, state) => const OtherDisabilityScreen(),
       ),
       GoRoute(
-        path: '/register-complete',
+        path: registerComplete,
         builder: (context, state) => const RegisterCompleteScreen(),
       ),
-    ],
+      GoRoute(
+        path: home,
+        builder: (context, state) => const HomeScreen(),
+      ),
+    ];
+  }
+
+  static final router = GoRouter(
+    initialLocation: '/login',
+    routes: getRoutes(),
   );
 } 
